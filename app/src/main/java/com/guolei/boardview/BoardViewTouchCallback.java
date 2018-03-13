@@ -53,7 +53,7 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
             viewHolder.itemView.setRotation(-5f);
         }
         super.onSelectedChanged(viewHolder, actionState);
-        
+
     }
 
     @Override

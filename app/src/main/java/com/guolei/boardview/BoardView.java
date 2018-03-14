@@ -26,14 +26,7 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.FrameLayout;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 下午4:21
- * Desc:
- */
+
 // TODO: 18/3/13 缩小状态下，存在remove 不insert的情况 这是因为落在margin的位置了，要避免这个问题
 public class BoardView extends FrameLayout {
     private static final String TAG = BoardView.class.getSimpleName();

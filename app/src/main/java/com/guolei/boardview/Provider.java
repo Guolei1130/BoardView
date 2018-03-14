@@ -4,14 +4,7 @@ package com.guolei.boardview;
 
 import android.support.v7.widget.RecyclerView;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/3/6
- * Time: 上午10:47
- * Desc:
- */
+
 public class Provider {
 
     private long mSelectedId = RecyclerView.NO_ID;

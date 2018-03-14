@@ -11,14 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 上午11:24
- * Desc:
- */
+
 public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleViewHolder> {
 
     private List<String> mData = new ArrayList<>();

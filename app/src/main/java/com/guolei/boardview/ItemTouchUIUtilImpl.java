@@ -8,14 +8,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchUIUtil;
 import android.view.View;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 下午12:26
- * Desc:
- */
+
 public class ItemTouchUIUtilImpl {
     static class Api21Impl extends ItemTouchUIUtilImpl.BaseImpl {
         @Override

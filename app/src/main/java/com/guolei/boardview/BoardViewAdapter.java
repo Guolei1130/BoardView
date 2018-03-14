@@ -7,14 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 上午11:09
- * Desc:
- */
+
 public class BoardViewAdapter extends RecyclerView.Adapter<BoardViewAdapter.SimpleViewHolder> {
 
     @Override

@@ -3,14 +3,7 @@ package com.guolei.boardview;
 
 import android.support.v7.widget.RecyclerView;
 
-/**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 上午11:36
- * Desc:
- */
+
 public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
 
     private RecyclerView.Adapter mAdapter;

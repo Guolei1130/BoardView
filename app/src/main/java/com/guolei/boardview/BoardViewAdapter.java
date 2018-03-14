@@ -1,11 +1,5 @@
 package com.guolei.boardview;
 
-//                    _    _   _ _
-//__      _____  _ __| | _| |_(_) | ___
-//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
-// \ V  V / (_) | |  |   <| |_| | |  __/
-//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
-
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;

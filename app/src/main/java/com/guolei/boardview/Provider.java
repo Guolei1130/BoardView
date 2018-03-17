@@ -10,9 +10,7 @@ public class Provider {
     private long mSelectedId = RecyclerView.NO_ID;
     private boolean isSmall = false;
     private float mFac = 1;
-
     private static Provider INSTANCE;
-
 
     public static Provider getInstance() {
         if (INSTANCE == null) {
@@ -20,19 +18,14 @@ public class Provider {
         }
         return INSTANCE;
     }
-
     private Provider() {
-
     }
-
     public void setSelectedId(long selectedId) {
         mSelectedId = selectedId;
     }
-
     public long getSelectedId() {
         return mSelectedId;
     }
-
     public void setSmall(boolean isSmall) {
         this.isSmall = isSmall;
         if (isSmall) {
@@ -41,11 +34,9 @@ public class Provider {
             mFac = 1f;
         }
     }
-
     public boolean isSmall() {
         return isSmall;
     }
-
     public float getFac() {
         return mFac;
     }

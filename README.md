@@ -6,7 +6,7 @@
 
 ![这是效果图](https://github.com/Guolei1130/BoardView/blob/master/boardview.gif?raw=true)
 
-大家可以安装那个debug的apk文件体验一哈。
+大家可以安装那个debug的apk文件体验一哈,注意，这里是debug的包，所以直接安装不了，要**adb install -t 包 的方式去安装**
 
 暂时还有一个小bug懒得改。
 

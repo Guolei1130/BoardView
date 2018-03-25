@@ -1,13 +1,9 @@
 package com.guolei.boardview;
 
-
-
 import android.support.v7.widget.RecyclerView;
 
 
 public class BoardViewCallback implements BoardView.Callback {
-
-    private static final String TAG = "BoardView";
 
     @Override
     public void onMoved(RecyclerView recyclerView, int from, int to) {

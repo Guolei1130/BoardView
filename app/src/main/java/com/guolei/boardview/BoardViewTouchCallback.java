@@ -8,7 +8,7 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
 
     private RecyclerView.Adapter mAdapter;
 
-    public BoardViewTouchCallback(RecyclerView.Adapter adapter) {
+    BoardViewTouchCallback(RecyclerView.Adapter adapter) {
         mAdapter = adapter;
     }
 

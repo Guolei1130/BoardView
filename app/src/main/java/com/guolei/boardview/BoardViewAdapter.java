@@ -23,7 +23,9 @@ public class BoardViewAdapter extends RecyclerView.Adapter<BoardViewAdapter.Simp
         holder.recyclerView.setLayoutManager(new SimpleLayoutManager(holder.itemView.getContext()));
         RecyclerView.Adapter adapter = new ColumnAdapter(position, 20);
         holder.recyclerView.setAdapter(adapter);
-        holder.recyclerView.addItemDecoration(new CustomItemDecoration());
+        if (holder.recyclerView.getItemDecorationAt(0) == null) {
+            holder.recyclerView.addItemDecoration(new CustomItemDecoration());
+        }
         holder.recyclerView.getItemAnimator().setAddDuration(0);
         holder.recyclerView.getItemAnimator().setRemoveDuration(0);
     }
@@ -33,12 +35,12 @@ public class BoardViewAdapter extends RecyclerView.Adapter<BoardViewAdapter.Simp
         return 10;
     }
 
-    public class SimpleViewHolder extends RecyclerView.ViewHolder {
+    class SimpleViewHolder extends RecyclerView.ViewHolder {
 
         RecyclerView recyclerView;
         TextView title;
 
-        public SimpleViewHolder(View itemView) {
+        SimpleViewHolder(View itemView) {
             super(itemView);
             recyclerView = itemView.findViewById(R.id.recycler_view);
             title = itemView.findViewById(R.id.title);

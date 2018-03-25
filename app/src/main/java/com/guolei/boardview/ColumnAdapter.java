@@ -16,7 +16,7 @@ public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleView
 
     private List<String> mData = new ArrayList<>();
 
-    public ColumnAdapter(int index, int count) {
+    ColumnAdapter(int index, int count) {
         for (int i = 0; i < count; i++) {
             mData.add(String.valueOf(index) + String.valueOf(i));
         }
@@ -43,7 +43,7 @@ public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleView
         return mData.size();
     }
 
-    public int getPositionFromId() {
+    int getPositionFromId() {
         for (int i = 0; i < mData.size(); i++) {
             if (Long.parseLong(mData.get(i)) == Provider.getInstance().getSelectedId()) {
                 return i;
@@ -52,29 +52,29 @@ public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleView
         return RecyclerView.NO_POSITION;
     }
 
-    public String remove(int position) {
+    String remove(int position) {
         return mData.remove(position);
     }
 
-    public void add(int position, String data) {
+    void add(int position, String data) {
         mData.add(position, data);
     }
 
-    public void swap(int fromPos, int toPos) {
+    void swap(int fromPos, int toPos) {
         Collections.swap(mData, fromPos, toPos);
     }
 
-    public static class SimpleViewHolder extends RecyclerView.ViewHolder {
+    static class SimpleViewHolder extends RecyclerView.ViewHolder {
 
         TextView mTextView;
 
-        public SimpleViewHolder(View itemView) {
+        SimpleViewHolder(View itemView) {
             super(itemView);
             mTextView = itemView.findViewById(R.id.content);
         }
     }
 
-    public long getIdByPosition(int position) {
+    long getIdByPosition(int position) {
         if (position > mData.size() - 1) {
             return RecyclerView.NO_ID;
         }

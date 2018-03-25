@@ -1,22 +1,24 @@
 package com.guolei.boardview;
 
 
-
 import android.content.Context;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 
 
 public class SimpleLayoutManager extends LinearLayoutManager {
-    public SimpleLayoutManager(Context context) {
+
+    SimpleLayoutManager(Context context) {
         super(context);
     }
 
-    public SimpleLayoutManager(Context context, int orientation, boolean reverseLayout) {
+    SimpleLayoutManager(Context context, int orientation, boolean reverseLayout) {
         super(context, orientation, reverseLayout);
     }
 
+    @SuppressWarnings("unused")
     public SimpleLayoutManager(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
@@ -26,7 +28,7 @@ public class SimpleLayoutManager extends LinearLayoutManager {
         try {
             super.onLayoutChildren(recycler, state);
         } catch (Exception e) {
-//            Log.e("BoardView", "onLayoutChildren: " + e.getMessage());
+            Log.e(Provider.TAG, "onLayoutChildren: " + e.getMessage());
         }
     }
 }

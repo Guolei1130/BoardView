@@ -56,6 +56,8 @@ public class BoardView extends FrameLayout {
 
     private Callback mCallback;
 
+    private int mRootViewHeight;
+
     public BoardView(@NonNull Context context) {
         this(context, null);
     }
@@ -536,18 +538,21 @@ public class BoardView extends FrameLayout {
             //还原
             Provider.getInstance().setSmall(false);
         }
-        // TODO: 18/3/7 缩小后 还原，高度问题，这里计算的不对
         float scale = Provider.getInstance().getFac();
         View rootView = (View) getParent();
+        if (lessen && mRootViewHeight == 0) {
+            mRootViewHeight = rootView.getHeight();
+        }
         rootView.getLayoutParams().width = (int) (getWindowWidth() * (1 / scale));
-        rootView.getLayoutParams().height = (int) (rootView.getHeight() * (1 / scale));
+        rootView.getLayoutParams().height = (int) (mRootViewHeight * (1 / scale));
         setScaleX(scale);
         setScaleY(scale);
         setPivotX(0f);
         setPivotY(0f);
         requestLayout();
         for (int i = 0; i < mContentView.getChildCount(); i++) {
-            View child = mContentView.getChildAt(i);
+            ViewGroup child = (ViewGroup) mContentView.getChildAt(i);
+            Log.e(TAG, "scale: " + child.getChildAt(1).getHeight() + ";;;----->" + lessen);
             child.requestLayout();
         }
     }
@@ -636,7 +641,6 @@ public class BoardView extends FrameLayout {
                     && x <= child.getRight() + translationX + rect.right + 30
                     && y >= child.getTop() + translationY - rect.top
                     && y <= child.getBottom() + translationY + rect.bottom) {
-                Log.e(TAG, "findChildViewUnderWithInsets: " + rect.toString());
                 return child;
             }
         }

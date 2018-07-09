@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.guolei.boardview.MainActivity"
+    tools:context="com.guolei.boardview.com.guolei.ui.MainActivity"
     >
 
     <com.guolei.boardview.BoardView

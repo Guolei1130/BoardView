@@ -1,4 +1,9 @@
 package com.guolei.boardview;
+//                    _    _   _ _
+//__      _____  _ __| | _| |_(_) | ___
+//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
+// \ V  V / (_) | |  |   <| |_| | |  __/
+//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
 
 
 import android.animation.Animator;
@@ -20,13 +25,21 @@ import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.animation.Interpolator;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * Copyright © 2013-2017 Worktile. All Rights Reserved.
+ * Author: guolei
+ * Email: 1120832563@qq.com
+ * Date: 18/2/27
+ * Time: 下午12:22
+ * Desc:
+ */
 public class ItemTouchHelper extends RecyclerView.ItemDecoration
         implements RecyclerView.OnChildAttachStateChangeListener {
 
@@ -256,7 +269,7 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
     private final RecyclerView.OnItemTouchListener mOnItemTouchListener = new RecyclerView.OnItemTouchListener() {
         @Override
         public boolean onInterceptTouchEvent(RecyclerView recyclerView, MotionEvent event) {
-            if (landUpHeaderView(event)) {
+            if (landUpAssignView(event)) {
                 mGestureDetector.onTouchEvent(event);
             }
             if (DEBUG) {
@@ -303,7 +316,7 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
 
         @Override
         public void onTouchEvent(RecyclerView recyclerView, MotionEvent event) {
-            if (landUpHeaderView(event)) {
+            if (landUpAssignView(event)) {
                 mGestureDetector.onTouchEvent(event);
             }
             if (DEBUG) {
@@ -612,6 +625,7 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
             mSelected = selected;
 
             if (actionState == ACTION_STATE_DRAG) {
+                //这个是给出触感反馈，震动的效果！
                 mSelected.itemView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             }
         }
@@ -1968,7 +1982,7 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
          * ItemTouchHelper also takes care of drawing the child after other children if it is being
          * dragged. This is done using child re-ordering mechanism. On platforms prior to L, this
          * is
-         * achieved via {@link android.view.ViewGroup#getChildDrawingOrder(int, int)} and on L
+         * achieved via {@link ViewGroup#getChildDrawingOrder(int, int)} and on L
          * and after, it changes View's elevation value to be greater than all other children.)
          *
          * @param c                 The canvas which RecyclerView is drawing its children
@@ -2002,7 +2016,7 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
          * ItemTouchHelper also takes care of drawing the child after other children if it is being
          * dragged. This is done using child re-ordering mechanism. On platforms prior to L, this
          * is
-         * achieved via {@link android.view.ViewGroup#getChildDrawingOrder(int, int)} and on L
+         * achieved via {@link ViewGroup#getChildDrawingOrder(int, int)} and on L
          * and after, it changes View's elevation value to be greater than all other children.)
          *
          * @param c                 The canvas which RecyclerView is drawing its children
@@ -2224,6 +2238,10 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
                     if (!mCallback.hasDragFlag(mRecyclerView, vh)) {
                         return;
                     }
+                    if (mResponseEventListener != null && !mResponseEventListener
+                            .isEnableSelectColumn(vh.getAdapterPosition())) {
+                        return;
+                    }
                     int pointerId = e.getPointerId(0);
                     // Long press is deferred.
                     // Check w/ active pointer id to avoid selecting after motion
@@ -2365,12 +2383,39 @@ public class ItemTouchHelper extends RecyclerView.ItemDecoration
     /**
      * 判断落点是否落在Header上
      */
-    private boolean landUpHeaderView(MotionEvent event) {
+    private Rect globalVisible = new Rect();
+
+    private boolean landUpAssignView(MotionEvent event) {
         View childView = findChildView(event);
         if (childView == null) return false;
-        int x = (int) event.getX();
-        int y = (int) event.getY();
-        View header = childView.findViewById(R.id.title);
-        return header.getTop() < y && header.getBottom() > y;
+        int x = (int) event.getRawX();
+        int y = (int) event.getRawY();
+        View header;
+        if (mResponseEventListener != null && mResponseEventListener.getResponseViewId() > 0) {
+            header = childView.findViewById(mResponseEventListener.getResponseViewId());
+        } else {
+            if (childView instanceof ViewGroup) {
+                header = ((ViewGroup) childView).getChildAt(0);
+            } else {
+                header = childView;
+            }
+        }
+        if (header == null) {
+            return false;
+        }
+        header.getGlobalVisibleRect(globalVisible);
+        return globalVisible.contains(x, y);
+    }
+
+    private ResponseEventListener mResponseEventListener;
+
+    public void setResponseEventListener(ResponseEventListener listener) {
+        mResponseEventListener = listener;
+    }
+
+    public interface ResponseEventListener {
+        int getResponseViewId();
+
+        boolean isEnableSelectColumn(int column);
     }
 }

@@ -10,7 +10,7 @@ import android.util.Log;
 
 public class SimpleLayoutManager extends LinearLayoutManager {
 
-    SimpleLayoutManager(Context context) {
+    public SimpleLayoutManager(Context context) {
         super(context);
     }
 
@@ -28,7 +28,7 @@ public class SimpleLayoutManager extends LinearLayoutManager {
         try {
             super.onLayoutChildren(recycler, state);
         } catch (Exception e) {
-            Log.e(Provider.TAG, "onLayoutChildren: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

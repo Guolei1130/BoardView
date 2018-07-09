@@ -1,4 +1,4 @@
-package com.guolei.boardview;
+package com.guolei.ui;
 
 
 import android.support.v7.widget.RecyclerView;
@@ -7,19 +7,24 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.guolei.boardview.BaseBoardViewAdapter;
+import com.guolei.boardview.BoardViewHolder;
+import com.guolei.boardview.R;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 
-public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleViewHolder> {
+public class ColumnAdapter extends BaseBoardViewAdapter<ColumnAdapter.SimpleViewHolder,String> {
 
     private List<String> mData = new ArrayList<>();
 
-    ColumnAdapter(int index, int count) {
-        for (int i = 0; i < count; i++) {
-            mData.add(String.valueOf(index) + String.valueOf(i));
-        }
+    private BoardViewHolder mBoardViewHolder;
+
+    ColumnAdapter(BoardViewHolder boardViewHolder,List<String> data) {
+        mBoardViewHolder = boardViewHolder;
+        mData.addAll(data);
     }
 
     @Override
@@ -31,7 +36,7 @@ public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleView
     @Override
     public void onBindViewHolder(SimpleViewHolder holder, int position) {
         holder.mTextView.setText(mData.get(position));
-        if (Long.parseLong(mData.get(position)) == Provider.getInstance().getSelectedId()) {
+        if (mData.get(position).equals(mBoardViewHolder.getSelectedId())) {
             holder.itemView.setVisibility(View.INVISIBLE);
         } else {
             holder.itemView.setVisibility(View.VISIBLE);
@@ -43,24 +48,32 @@ public class ColumnAdapter extends RecyclerView.Adapter<ColumnAdapter.SimpleView
         return mData.size();
     }
 
-    int getPositionFromId() {
-        for (int i = 0; i < mData.size(); i++) {
-            if (Long.parseLong(mData.get(i)) == Provider.getInstance().getSelectedId()) {
-                return i;
-            }
-        }
-        return RecyclerView.NO_POSITION;
+    @Override
+    public int getPositionFromId(String id) {
+        return mData.indexOf(id);
     }
 
-    String remove(int position) {
+    @Override
+    public String getIdFromPosition(int position) {
+        return mData.get(position);
+    }
+
+    @Override
+    public void add(int position, String data) {
+        mData.add(position,data);
+    }
+
+    @Override
+    public String getData(int position) {
+        return mData.get(position);
+    }
+
+    @Override
+    public String remove(int position) {
         return mData.remove(position);
     }
 
-    void add(int position, String data) {
-        mData.add(position, data);
-    }
-
-    void swap(int fromPos, int toPos) {
+    public void swap(int fromPos, int toPos) {
         Collections.swap(mData, fromPos, toPos);
     }
 

@@ -1,4 +1,9 @@
 package com.guolei.boardview;
+//                    _    _   _ _
+//__      _____  _ __| | _| |_(_) | ___
+//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
+// \ V  V / (_) | |  |   <| |_| | |  __/
+//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
 
 
 import android.animation.Animator;
@@ -9,12 +14,13 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.LinearSnapHelper;
+import android.support.v7.widget.PagerSnapHelper;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -26,37 +32,46 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.FrameLayout;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+/**
+ * Copyright © 2013-2017 Worktile. All Rights Reserved.
+ * Author: guolei
+ * Email: 1120832563@qq.com
+ * Date: 18/2/27
+ * Time: 下午4:21
+ * Desc:
+ */
 public class BoardView extends FrameLayout {
-    private static final String TAG = Provider.TAG;
+    private static final String TAG = BoardView.class.getSimpleName();
 
     private static final int ACTION_BIND = 0;
     private static final int ACTION_UPDATE = 1;
 
     private View mMirrorView;
-    private View mCurrentSelectedLayout;
     private RecyclerView mContentView;
     private RecyclerView mCurrentSelectedRecyclerView;
-
+    private View mCurrentSelectedLayout;
     private GestureDetectorCompat mGestureDetector;
 
     private RecyclerView.ViewHolder mSelected;
-
     private float mInitialTouchX, mInitialTouchY;
     private MotionEvent mCurrentTouchEvent, mLastMoveEvent, mLongPressEvent;
 
     private boolean mCanMove = true;
 
-    private int mTitleHeight;
-    private int mInsertPosition = -1;
+    private int mColumnHeaderHeight;
+    private int mInsertPosition = RecyclerView.NO_POSITION;
 
-    private int mTouchSlop;
-    private int mScaledTouchSlop;
+    private int mTouchSlop, mScaledTouchSlop;
+    private int mParentHeight, mParentWidth;
 
-    private Callback mCallback;
+    private int mOriginColumnIndex, mOriginRowIndex, mTargetColumnIndex, mTargetRowIndex;
 
-    private int mRootViewHeight;
+    private ItemTouchHelper helper;
+    private BoardViewListener mBoardViewListener;
+    private BoardViewHolder mBoardViewHolder;
 
     public BoardView(@NonNull Context context) {
         this(context, null);
@@ -73,6 +88,7 @@ public class BoardView extends FrameLayout {
         mTouchSlop = ViewConfiguration.getTouchSlop();
         mScaledTouchSlop = viewConfiguration.getScaledTouchSlop();
         initGestureDetector();
+        mBoardViewHolder = new BoardViewHolder();
     }
 
     private void initGestureDetector() {
@@ -81,8 +97,15 @@ public class BoardView extends FrameLayout {
         }
     }
 
-    public void setCallback(Callback callback) {
-        mCallback = callback;
+    public void setListener(BoardViewListener listener) {
+        mBoardViewListener = listener;
+        mBoardViewHolder.setBoardViewListener(listener);
+        mContentView.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+                outRect.set(listener.getPxInColumn(), 0, listener.getPxInColumn(), 0);
+            }
+        });
     }
 
     @Override
@@ -90,11 +113,10 @@ public class BoardView extends FrameLayout {
         super.onFinishInflate();
         mContentView = new RecyclerView(getContext());
         mContentView.setLayoutParams(generateDefaultLayoutParams());
-        mContentView.setLayoutManager(new SimpleLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        mContentView.setLayoutManager(new SimpleLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL,
+                false));
         mContentView.setHasFixedSize(true);
         addView(mContentView);
-        RecyclerView.Adapter adapter = new BoardViewAdapter();
-        mContentView.setAdapter(adapter);
         mContentView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -103,28 +125,41 @@ public class BoardView extends FrameLayout {
                 }
                 if (newState != RecyclerView.SCROLL_STATE_IDLE) {
                     mGestureDetector.setIsLongpressEnabled(false);
+                    removeLongPressMessage();
                 } else {
                     mGestureDetector.setIsLongpressEnabled(true);
                 }
 
             }
         });
-        ItemTouchHelper helper = new ItemTouchHelper(new BoardViewTouchCallback(adapter));
-        helper.attachToRecyclerView(mContentView);
-        LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
+
+        PagerSnapHelper linearSnapHelper = new PagerSnapHelper();
         linearSnapHelper.attachToRecyclerView(mContentView);
         mMirrorView = new View(getContext());
-        mMirrorView.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mMirrorView.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         mMirrorView.setVisibility(GONE);
         mMirrorView.setAlpha(.8f);
         addView(mMirrorView);
+
+
+    }
+
+    public void setAdapter(RecyclerView.Adapter adapter) {
+        mContentView.setAdapter(adapter);
+        helper = new ItemTouchHelper(new BoardViewTouchCallback(mBoardViewHolder));
+        helper.attachToRecyclerView(mContentView);
+        helper.setResponseEventListener(mBoardViewListener);
     }
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        if (landUpInlineRecyclerView(ev)) {
-            mGestureDetector.onTouchEvent(ev);
+        if (landupInnerRecyclerView(ev)) {
+            mGestureDetector.setIsLongpressEnabled(true);
+        } else {
+            mGestureDetector.setIsLongpressEnabled(false);
         }
+        mGestureDetector.onTouchEvent(ev);
         switch (ev.getAction()) {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
@@ -137,16 +172,21 @@ public class BoardView extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (landUpInlineRecyclerView(event)) {
-            mGestureDetector.onTouchEvent(event);
+        if (landupInnerRecyclerView(event)) {
+            mGestureDetector.setIsLongpressEnabled(true);
+        } else {
+            mGestureDetector.setIsLongpressEnabled(false);
         }
+        mGestureDetector.onTouchEvent(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
                 if (mSelected != null) {
                     mCurrentTouchEvent = MotionEvent.obtain(event);
-                    if (Provider.getInstance().isSmall()) {
-                        mMirrorView.setTranslationX(event.getX() - mLongPressEvent.getX() + mInitialTouchX);
-                        mMirrorView.setTranslationY(event.getY() - mLongPressEvent.getY() + mInitialTouchY);
+                    if (mBoardViewHolder.isSmall()) {
+                        mMirrorView.setTranslationX(event.getX() - mLongPressEvent.getX()
+                                + mInitialTouchX);
+                        mMirrorView.setTranslationY(event.getY() - mLongPressEvent.getY()
+                                + mInitialTouchY);
                     } else {
                         mMirrorView.setTranslationX(event.getX() - mInitialTouchX);
                         mMirrorView.setTranslationY(event.getY() - mInitialTouchY);
@@ -158,7 +198,7 @@ public class BoardView extends FrameLayout {
                         //判断是需要进行横向欢动还是纵向滑动
                     }
                     selectScroll();
-                    mContentView.invalidate();
+                    //mContentView.invalidate();
                 }
                 break;
             case MotionEvent.ACTION_CANCEL:
@@ -177,29 +217,33 @@ public class BoardView extends FrameLayout {
          *  1.找到落点所在的RecyclerView
          */
         RecyclerView mCurrentRecyclerView = findRecyclerView(mCurrentTouchEvent);
+        // 如果落点在RecyclerView的下面，这种情况下是找不到RecyclerView的，
         if (mCurrentRecyclerView == null) {
-            mContentView.removeCallbacks(mScrollRunnable);
-            return;
+            mCurrentRecyclerView = findRecyclerViewWithoutY(mCurrentTouchEvent);
+            if (mCurrentRecyclerView == null) {
+                mContentView.removeCallbacks(mContentViewRunnable);
+                return;
+            }
         }
-        mCurrentRecyclerView = mContentView.getChildAt(1).findViewById(R.id.recycler_view);
+//        mCurrentRecyclerView = mContentView.getChildAt(1).findViewById(mBoardViewListener.getColumnRecyclerViewId());
         int mCurrentRecyclerViewTop = mCurrentRecyclerView.getTop();
         int mCurrentRecyclerViewBottom = mCurrentRecyclerView.getBottom();
 
-        int distanceTop = Math.abs((int) (mTitleHeight + mCurrentRecyclerViewTop
+        float distanceTop = Math.abs((int) (mColumnHeaderHeight + mCurrentRecyclerViewTop
                 - mCurrentTouchEvent.getY()));
-        int distanceBottom = Math.abs((int) (mTitleHeight + mCurrentRecyclerViewBottom
+        float distanceBottom = Math.abs((int) (mColumnHeaderHeight + mCurrentRecyclerViewBottom
                 - mCurrentTouchEvent.getY()));
-        int distanceLeft = (int) mCurrentTouchEvent.getX();
-        int distanceRight = (int) (getWindowWidth() / Provider.getInstance().getFac()
+        float distanceLeft = mCurrentTouchEvent.getX();
+        float distanceRight = (getWindowWidth() / mBoardViewHolder.getFactor()
                 - mCurrentTouchEvent.getX());
 
         if ((distanceTop < distanceLeft && distanceTop < distanceRight)
                 || (distanceBottom < distanceLeft && distanceBottom < distanceRight)) {
-            mCurrentSelectedRecyclerView.removeCallbacks(mInlineScrollRunnable);
-            mInlineScrollRunnable.run();
+            mCurrentSelectedRecyclerView.removeCallbacks(mInnerRecyclerViewRunnable);
+            mInnerRecyclerViewRunnable.run();
         } else {
-            mContentView.removeCallbacks(mScrollRunnable);
-            mScrollRunnable.run();
+            mContentView.removeCallbacks(mContentViewRunnable);
+            mContentViewRunnable.run();
         }
     }
 
@@ -213,19 +257,22 @@ public class BoardView extends FrameLayout {
             if (child == null) {
                 return;
             }
-            LinearLayoutManager layoutManager = (LinearLayoutManager) mCurrentSelectedRecyclerView
-                    .getLayoutManager();
+            LinearLayoutManager layoutManager = (LinearLayoutManager) mCurrentSelectedRecyclerView.getLayoutManager();
             RecyclerView.ViewHolder target = mCurrentSelectedRecyclerView.getChildViewHolder(child);
+            int currentColumn = mContentView.getChildViewHolder(mCurrentSelectedLayout).getAdapterPosition();
+            if (!mBoardViewHolder.getBoardViewListener().isEnableSwapInColumn(currentColumn)) {
+                return;
+            }
             if (target != mSelected && !mCurrentSelectedRecyclerView.isAnimating() && mCanMove) {
-                if (mCallback != null) {
+                if (mBoardViewListener != null) {
                     int toPos = target.getAdapterPosition();
                     int position = mSelected.getAdapterPosition();
                     if (position == -1) {
-                        ColumnAdapter adapter = (ColumnAdapter) mCurrentSelectedRecyclerView.getAdapter();
-                        position = adapter.getPositionFromId();
+                        BaseBoardViewAdapter adapter = (BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
+                        position = adapter.getPositionFromId(mBoardViewHolder.getSelectedId());
                     }
                     if (position == -1) return;
-                    mCallback.onMoved(mCurrentSelectedRecyclerView, position,
+                    mBoardViewListener.onSwap(mCurrentSelectedRecyclerView, position,
                             toPos);
                     /*
                      * 保持RecyclerView不发生移动
@@ -242,11 +289,20 @@ public class BoardView extends FrameLayout {
 
         // 跨RecyclerView
         if (targetRecycler != null && targetRecycler != mCurrentSelectedRecyclerView) {
-            String data = "error data";
-            if (mCallback != null) {
-                int pos = ((ColumnAdapter) mCurrentSelectedRecyclerView.getAdapter()).getPositionFromId();
-                data = mCallback.onRemoved(mCurrentSelectedRecyclerView, pos);
+            Object data = null;
+            boolean enableInsert = false;
+            if (mBoardViewListener != null) {
+                int pos = ((BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter())
+                        .getPositionFromId(mBoardViewHolder.getSelectedId());
+                data = mBoardViewListener.getData(mCurrentSelectedRecyclerView, pos);
+                //noinspection unchecked
+                enableInsert = mBoardViewListener.isEnableInsertRowInColumn(BoardViewHelper.findParentIndex(targetRecycler), data);
+                if (!enableInsert) {
+                    return;
+                }
+                data = mBoardViewListener.onRemove(mCurrentSelectedRecyclerView, pos);
             }
+
             mCurrentSelectedRecyclerView = targetRecycler;
             //找到落点所在的位置
             View view = findRecyclerViewChild(event);
@@ -256,18 +312,20 @@ public class BoardView extends FrameLayout {
                 tmpHolder = mCurrentSelectedRecyclerView.getChildViewHolder(view);
                 position = tmpHolder.getAdapterPosition();
             }
-            if (mCallback != null) {
-                mCallback.onInserted(mCurrentSelectedRecyclerView, position, data);
+            if (mBoardViewListener != null) {
+                //noinspection unchecked
+                mBoardViewListener.onInsert(mCurrentSelectedRecyclerView, position, data);
                 if (position == 0) {
-                    Log.e(TAG, "updateAdapterIfNecessary: " + "Event没有落在View上，这种情况是错误的");
+                    Log.d(TAG, "updateAdapterIfNecessary: " + "Event没有落在View上，这种情况是错误的");
+//                    throw new IllegalStateException(event.toString());
                 }
             }
             mInsertPosition = position;
             //有时候会出现，删除动画。加上这句，能稍微改善下
             mSelected.itemView.setAlpha(0);
-            final RecyclerView.ViewHolder tmpViewHolder = mCurrentSelectedRecyclerView
+            final RecyclerView.ViewHolder tmpViewHolder1 = mCurrentSelectedRecyclerView
                     .findViewHolderForAdapterPosition(position);
-            if (tmpViewHolder == null || tmpViewHolder.getAdapterPosition() != -1) {
+            if (tmpViewHolder1 == null || tmpViewHolder1.getAdapterPosition() != -1) {
                 postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -282,14 +340,14 @@ public class BoardView extends FrameLayout {
         }
     }
 
-    final Runnable mScrollRunnable = new Runnable() {
+    final Runnable mContentViewRunnable = new Runnable() {
         @Override
         public void run() {
             if (mSelected != null && scrollIfNecessary()) {
                 if (mSelected != null) {
                     updateAdapterIfNecessary(mCurrentTouchEvent);
                 }
-                mContentView.removeCallbacks(mScrollRunnable);
+                mContentView.removeCallbacks(mContentViewRunnable);
                 ViewCompat.postOnAnimation(mContentView, this);
             }
         }
@@ -300,30 +358,28 @@ public class BoardView extends FrameLayout {
      */
     private boolean scrollIfNecessary() {
         int direction = getWindowWidth() - mCurrentTouchEvent.getX() > getWindowWidth() / 2 ? -1 : 1;
-        if (!mContentView.canScrollHorizontally(direction)) {
-            return false;
-        }
+        if (!mContentView.canScrollHorizontally(direction)) return false;
         //边缘检测
-        if (mContentView.getLeft() + 50 > mCurrentTouchEvent.getX()) {
+        if (mContentView.getLeft() + 150 > mCurrentTouchEvent.getX()) {
             //在左
-            mContentView.smoothScrollBy(-mScaledTouchSlop * 5, 0);
+            mContentView.smoothScrollBy(-mScaledTouchSlop * 8, 0);
             return true;
-        } else if (mContentView.getRight() - 50 < mCurrentTouchEvent.getX()) {
+        } else if (mContentView.getRight() - 150 < mCurrentTouchEvent.getX()) {
             //在右
-            mContentView.smoothScrollBy(mScaledTouchSlop * 5, 0);
+            mContentView.smoothScrollBy(mScaledTouchSlop * 8, 0);
             return true;
         }
         return false;
     }
 
-    final Runnable mInlineScrollRunnable = new Runnable() {
+    final Runnable mInnerRecyclerViewRunnable = new Runnable() {
         @Override
         public void run() {
-            if (mSelected != null && scrollInlineRVIfNecessary()) {
+            if (mSelected != null && scrollInnerRecyclerViewIfNecessary()) {
                 if (mSelected != null) {
                     updateAdapterIfNecessary(mCurrentTouchEvent);
                 }
-                mCurrentSelectedRecyclerView.removeCallbacks(mInlineScrollRunnable);
+                mCurrentSelectedRecyclerView.removeCallbacks(mInnerRecyclerViewRunnable);
                 ViewCompat.postOnAnimation(mCurrentSelectedRecyclerView, this);
             }
         }
@@ -332,12 +388,12 @@ public class BoardView extends FrameLayout {
     /**
      * 滑动内嵌的RecyclerView
      */
-    private boolean scrollInlineRVIfNecessary() {
-        int direction = mCurrentSelectedRecyclerView.getBottom() - (mCurrentTouchEvent.getY() - mTitleHeight)
-                > mCurrentTouchEvent.getY() - mTitleHeight - mCurrentSelectedRecyclerView.getTop() ? -1 : 1;
+    private boolean scrollInnerRecyclerViewIfNecessary() {
+        int direction = mCurrentSelectedRecyclerView.getBottom() - (mCurrentTouchEvent.getY() - mColumnHeaderHeight)
+                > mCurrentTouchEvent.getY() - mColumnHeaderHeight - mCurrentSelectedRecyclerView.getTop() ? -1 : 1;
         if (!mCurrentSelectedRecyclerView.canScrollVertically(direction)) return false;
         //边缘检测
-        if (mCurrentSelectedRecyclerView.getTop() + mTitleHeight > mCurrentTouchEvent.getY()) {
+        if (mCurrentSelectedRecyclerView.getTop() + mColumnHeaderHeight > mCurrentTouchEvent.getY()) {
             mCurrentSelectedRecyclerView.smoothScrollBy(0, -mScaledTouchSlop * 5);
             return true;
         } else if (mCurrentSelectedRecyclerView.getBottom() - 50 < mCurrentTouchEvent.getY()) {
@@ -346,6 +402,7 @@ public class BoardView extends FrameLayout {
         }
         return false;
     }
+
 
     private void recoverSelected() {
         mLastMoveEvent = null;
@@ -372,26 +429,52 @@ public class BoardView extends FrameLayout {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
+                            if (mSelected == null) {
+                                return;
+                            }
+                            mTargetColumnIndex = mContentView.getChildViewHolder((View) mCurrentSelectedRecyclerView.getParent())
+                                    .getAdapterPosition();
+                            mTargetRowIndex = mSelected.getAdapterPosition();
+                            if (mBoardViewListener != null) {
+                                mBoardViewListener.onReleaseRow(mOriginColumnIndex, mOriginRowIndex,
+                                        mTargetColumnIndex, mTargetRowIndex);
+                                RecyclerView.ViewHolder holder = mCurrentSelectedRecyclerView.findViewHolderForAdapterPosition(mTargetColumnIndex);
+                                if (holder != null && holder.itemView != null) {
+                                    holder.itemView.setAlpha(1);
+                                    holder.itemView.setVisibility(VISIBLE);
+                                }
+                            }
                             mMirrorView.setVisibility(GONE);
                             mSelected.itemView.setAlpha(1);
                             mSelected.itemView.setVisibility(VISIBLE);
-                            int posi = mSelected.getAdapterPosition();
-                            if (posi == -1) {
-                                // 这里是ViewHolder丢失位置信息的处理办法
-                                ColumnAdapter adapter = (ColumnAdapter) mCurrentSelectedRecyclerView
-                                        .getAdapter();
-                                int position = adapter.getPositionFromId();
-                                RecyclerView.ViewHolder tmpViewHolder = mCurrentSelectedRecyclerView
-                                        .findViewHolderForAdapterPosition(position);
-                                if (tmpViewHolder != null) {
-                                    tmpViewHolder.itemView.setVisibility(VISIBLE);
-                                } else {
-                                    mCurrentSelectedRecyclerView.getAdapter().notifyItemChanged(position);
-                                }
-                            } else {
-                                mCurrentSelectedRecyclerView.getAdapter().notifyItemChanged(posi);
-                            }
-                            Provider.getInstance().setSelectedId(RecyclerView.NO_ID);
+//                            final int posi = mSelected.getAdapterPosition();
+//                            if (posi == -1) {
+//                                // 这里是ViewHolder丢失位置信息的处理办法
+//                                ColumnAdapter adapter = (ColumnAdapter) mCurrentSelectedRecyclerView.getAdapter();
+//                                final int position = adapter.getPositionFromId();
+//                                RecyclerView.ViewHolder tmpViewHolder = mCurrentSelectedRecyclerView
+//                                        .findViewHolderForAdapterPosition(position);
+//                                if (tmpViewHolder != null) {
+//                                    tmpViewHolder.itemView.setVisibility(VISIBLE);
+//                                } else {
+//                                    postDelayed(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            mCurrentSelectedRecyclerView.getAdapter().notifyItemChanged(position);
+//                                        }
+//                                    }, 300);
+//                                    Log.e(TAG, "onAnimationEnd: ");
+//                                }
+//                            } else {
+//                                postDelayed(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        mCurrentSelectedRecyclerView.getAdapter().notifyItemChanged(posi);
+//                                    }
+//                                }, 300);
+//                                Log.e(TAG, "onAnimationEnd: ");
+//                            }
+                            mBoardViewHolder.setSelectedId("");
                             mSelected = null;
                         }
 
@@ -409,6 +492,17 @@ public class BoardView extends FrameLayout {
         }
     }
 
+    private boolean landupInnerRecyclerView(MotionEvent event) {
+        View view = mContentView.findChildViewUnder(event.getX(), event.getY());
+        if (view == null) {
+            view = findChildViewUnderWithInsets(mContentView, event.getX(), event.getY());
+        }
+        if (view == null) return false;
+        int y = (int) event.getY();
+        View recyclerView = view.findViewById(mBoardViewListener.getColumnRecyclerViewId());
+        return recyclerView != null && y > recyclerView.getTop() && y < recyclerView.getBottom();
+    }
+
     private void select(RecyclerView.ViewHolder selected, int actionState) {
         if (selected != null && selected != mSelected) {
             if (mSelected != null) {
@@ -416,9 +510,9 @@ public class BoardView extends FrameLayout {
             }
             mSelected = selected;
             int position = mSelected.getAdapterPosition();
-            ColumnAdapter adapter = (ColumnAdapter) mCurrentSelectedRecyclerView.getAdapter();
-            long id = adapter.getIdByPosition(position);
-            Provider.getInstance().setSelectedId(id);
+            BaseBoardViewAdapter adapter = (BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
+            String id = adapter.getIdFromPosition(position);
+            mBoardViewHolder.setSelectedId(id);
             if (actionState == ACTION_BIND) {
                 onBindSelected(mSelected.itemView);
             }
@@ -429,14 +523,15 @@ public class BoardView extends FrameLayout {
     private void onBindSelected(View selectedView) {
         //先设置偏移量
         int x = mCurrentSelectedLayout.getLeft() + selectedView.getLeft();
-        int y = mCurrentSelectedLayout.getTop() + selectedView.getTop() + mTitleHeight;
+        int y = mCurrentSelectedLayout.getTop() + selectedView.getTop() + mColumnHeaderHeight;
         ViewGroup.LayoutParams params = mMirrorView.getLayoutParams();
         params.width = selectedView.getWidth();
         params.height = selectedView.getHeight();
         mMirrorView.setLayoutParams(params);
         mMirrorView.setTranslationX(x);
         mMirrorView.setTranslationY(y);
-        Bitmap bitmap = Bitmap.createBitmap(selectedView.getWidth(), selectedView.getHeight(), Bitmap.Config.RGB_565);
+        Bitmap bitmap = Bitmap.createBitmap(selectedView.getWidth(), selectedView.getHeight(),
+                Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         selectedView.draw(canvas);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
@@ -450,20 +545,6 @@ public class BoardView extends FrameLayout {
         mSelected.itemView.setAlpha(0);
     }
 
-    private boolean landUpInlineRecyclerView(MotionEvent event) {
-        float x = event.getX();
-        float y = event.getY();
-        View view = mContentView.findChildViewUnder(x, y);
-        if (view == null) {
-            view = findChildViewUnderWithInsets(mContentView, x, y);
-        }
-        if (view == null) {
-            return false;
-        }
-        View recyclerView = view.findViewById(R.id.recycler_view);
-        return y > recyclerView.getTop() && y < recyclerView.getBottom();
-    }
-
     /**
      * 找到当前触摸点所在的RecyclerView
      */
@@ -472,87 +553,96 @@ public class BoardView extends FrameLayout {
         if (child == null) {
             return null;
         }
-        return child.findViewById(R.id.recycler_view);
+        return child.findViewById(mBoardViewListener.getColumnRecyclerViewId());
+    }
+
+    /**
+     * 找到当前触点所在的RecyclerView,不一定落在RecyclerView上.
+     */
+    private RecyclerView findRecyclerViewWithoutY(MotionEvent event) {
+        float x = event.getX();
+        for (int i = 0; i < mContentView.getChildCount(); i++) {
+            View child = mContentView.getChildAt(i);
+            if (child.getLeft() <= x && child.getRight() >= x) {
+                return child.findViewById(mBoardViewListener.getColumnRecyclerViewId());
+            }
+        }
+        return null;
+    }
+
+    private int getCurrentColumnTitleHeight(MotionEvent event) {
+        if (mColumnHeaderHeight != 0)
+            return mColumnHeaderHeight;
+        View child = mContentView.findChildViewUnder(event.getX(), event.getY());
+        return mColumnHeaderHeight = child.findViewById(mBoardViewListener.getResponseViewId()).getHeight();
     }
 
     private View findRecyclerViewChild(MotionEvent event) {
-        float x = event.getX();
-        float y = event.getY();
-        View child = mContentView.findChildViewUnder(x, y);
+        View child = mContentView.findChildViewUnder(event.getX(), event.getY());
         mCurrentSelectedLayout = child;
-        mCurrentSelectedRecyclerView = child.findViewById(R.id.recycler_view);
+        mCurrentSelectedRecyclerView = child.findViewById(mBoardViewListener.getColumnRecyclerViewId());
         int titleHeight = getCurrentColumnTitleHeight(event);
-        View view = mCurrentSelectedRecyclerView.findChildViewUnder(x - child.getLeft(),
-                y - titleHeight);
+        View view = mCurrentSelectedRecyclerView.findChildViewUnder(event.getX() - child.getLeft(),
+                event.getY() - titleHeight);
         if (view == null) {
-            view = findChildViewUnderWithInsets(mCurrentSelectedRecyclerView, x - mCurrentSelectedLayout.getLeft(),
-                    y - mCurrentSelectedLayout.getTop());
+            view = findChildViewUnderWithInsets(mCurrentSelectedRecyclerView,
+                    event.getX() - mCurrentSelectedLayout.getLeft(),
+                    event.getY() - mCurrentSelectedLayout.getTop());
         }
         return view;
     }
 
-    private int getCurrentColumnTitleHeight(MotionEvent event) {
-        if (mTitleHeight == 0) {
-            View child = mContentView.findChildViewUnder(event.getX(), event.getY());
-            mTitleHeight = child.findViewById(R.id.title).getHeight();
-        }
-        return mTitleHeight;
-    }
-
     private void updateSelectedByInsert() {
-        RecyclerView.ViewHolder viewHolder = mCurrentSelectedRecyclerView.findViewHolderForAdapterPosition(mInsertPosition);
+        RecyclerView.ViewHolder viewHolder = mCurrentSelectedRecyclerView
+                .findViewHolderForAdapterPosition(mInsertPosition);
         if (viewHolder != null) {
             if (viewHolder.getAdapterPosition() != -1) {
                 select(viewHolder, ACTION_UPDATE);
                 mCanMove = true;
             } else {
-                Log.e(TAG, "updateSelectedByInsert: error " + viewHolder.getAdapterPosition());
+                Log.d(TAG, "updateSelectedByInsert: error " + viewHolder.getAdapterPosition());
             }
         }
     }
 
-    private int mWindowHeight;
-
     @SuppressWarnings("unused")
     private int getWindowHeight() {
-        if (mWindowHeight == 0) {
-            mWindowHeight = getContext().getResources().getDisplayMetrics().heightPixels;
-        }
-        return mWindowHeight;
+        return getContext().getResources().getDisplayMetrics().heightPixels;
     }
-
-    private int mWindowWidth;
 
     private int getWindowWidth() {
-        if (mWindowWidth == 0) {
-            mWindowWidth = getContext().getResources().getDisplayMetrics().widthPixels;
-        }
-        return mWindowWidth;
+        return getContext().getResources().getDisplayMetrics().widthPixels;
     }
 
-    public void scale(boolean lessen) {
+    public void scale() {
+        boolean lessen = !mBoardViewHolder.isSmall();
         if (lessen) {
             //缩小
-            Provider.getInstance().setSmall(true);
+            mBoardViewHolder.setSmall(true);
         } else {
             //还原
-            Provider.getInstance().setSmall(false);
+            mBoardViewHolder.setSmall(false);
         }
-        float scale = Provider.getInstance().getFac();
+        float scale = mBoardViewHolder.getFactor();
         View rootView = (View) getParent();
-        if (lessen && mRootViewHeight == 0) {
-            mRootViewHeight = rootView.getHeight();
+        if (lessen && mParentHeight == 0) {
+            mParentHeight = rootView.getHeight();
+            mParentWidth = rootView.getWidth();
         }
-        rootView.getLayoutParams().width = (int) (getWindowWidth() * (1 / scale));
-        rootView.getLayoutParams().height = (int) (mRootViewHeight * (1 / scale));
-        setScaleX(scale);
-        setScaleY(scale);
+        if (lessen) {
+            rootView.getLayoutParams().width = (int) (mParentWidth * (1 / scale));
+            rootView.getLayoutParams().height = (int) (mParentHeight * (1 / scale));
+        } else {
+            rootView.getLayoutParams().width = -1;
+            rootView.getLayoutParams().height = -1;
+        }
         setPivotX(0f);
         setPivotY(0f);
-        requestLayout();
+        setScaleX(scale);
+        setScaleY(scale);
+        rootView.requestLayout();
         for (int i = 0; i < mContentView.getChildCount(); i++) {
-            ViewGroup child = (ViewGroup) mContentView.getChildAt(i);
-            Log.e(TAG, "scale: " + child.getChildAt(1).getHeight() + ";;;----->" + lessen);
+            View child = mContentView.getChildAt(i);
             child.requestLayout();
         }
     }
@@ -561,29 +651,55 @@ public class BoardView extends FrameLayout {
 
         @Override
         public boolean onDown(MotionEvent e) {
-            return true;
+            return false;
+        }
+
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            if (findRecyclerView(e) == null) {
+                scale();
+                return true;
+            }
+            return false;
         }
 
         @Override
         public void onLongPress(MotionEvent e) {
-            if (mContentView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE
-                    || mSelected != null) {
+            Log.e(TAG, "onLongPress: ");
+            if (mContentView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
+                return;
+            }
+            if (mSelected != null || e.getAction() != MotionEvent.ACTION_DOWN) {
                 return;
             }
             mLastMoveEvent = e;
             RecyclerView childRecyclerView = findRecyclerView(e);
-            if (childRecyclerView == null) return;
+            if (childRecyclerView == null || childRecyclerView.getScrollState()
+                    != RecyclerView.SCROLL_STATE_IDLE) {
+                return;
+            }
+            RecyclerView.ViewHolder columnViewHolder = mContentView
+                    .getChildViewHolder((View) childRecyclerView.getParent());
+            mOriginColumnIndex = columnViewHolder.getAdapterPosition();
             View recyclerViewChild = findRecyclerViewChild(e);
             if (recyclerViewChild == null) {
-                recyclerViewChild = findChildViewUnderWithInsets(childRecyclerView, e.getX(), e.getY());
+                recyclerViewChild = findChildViewUnderWithInsets(childRecyclerView,
+                        e.getX(), e.getY());
             }
-            if (recyclerViewChild == null) return;
-            select(childRecyclerView.getChildViewHolder(recyclerViewChild), 0);
+            if (recyclerViewChild == null) {
+                return;
+            }
+            RecyclerView.ViewHolder itemViewHolder = childRecyclerView.getChildViewHolder(recyclerViewChild);
+            mOriginRowIndex = itemViewHolder.getAdapterPosition();
+            if (!mBoardViewHolder.getBoardViewListener().isEnableSelectRow(mOriginColumnIndex, mOriginRowIndex)) {
+                return;
+            }
+            select(itemViewHolder, 0);
             if (mSelected != null) {
                 //左右边界情况
                 Rect rect = new Rect();
                 mSelected.itemView.getGlobalVisibleRect(rect);
-                int width = (int) (mSelected.itemView.getWidth() * Provider.getInstance().getFac());
+                int width = (int) (mSelected.itemView.getWidth() * mBoardViewHolder.getFactor());
                 if (Math.abs(rect.left - rect.right) < width) {
                     if (rect.right + width > getWindowWidth()) {
                         //右侧
@@ -601,7 +717,7 @@ public class BoardView extends FrameLayout {
                 mInitialTouchY = e.getY();
             }
             //缩小状态下，上面的方案不行，采用下面的方案
-            if (Provider.getInstance().isSmall()) {
+            if (mBoardViewHolder.isSmall()) {
                 mLongPressEvent = MotionEvent.obtain(e);
                 mInitialTouchX = mMirrorView.getTranslationX();
                 mInitialTouchY = mMirrorView.getTranslationY();
@@ -610,12 +726,12 @@ public class BoardView extends FrameLayout {
 
     }
 
-
     private Method getItemDecorInsetsForChildMethod;
 
     {
         try {
-            getItemDecorInsetsForChildMethod = RecyclerView.class.getDeclaredMethod("getItemDecorInsetsForChild", View.class);
+            getItemDecorInsetsForChildMethod = RecyclerView.class
+                    .getDeclaredMethod("getItemDecorInsetsForChild", View.class);
             getItemDecorInsetsForChildMethod.setAccessible(true);
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
@@ -647,11 +763,46 @@ public class BoardView extends FrameLayout {
         return null;
     }
 
-    public interface Callback {
-        void onMoved(RecyclerView recyclerView, int from, int to);
-
-        String onRemoved(RecyclerView recyclerView, int position);
-
-        void onInserted(RecyclerView recyclerView, int position, String data);
+    public void removeLongPressMessage() {
+        try {
+            Field impl = mGestureDetector.getClass().getDeclaredField("mImpl");
+            impl.setAccessible(true);
+            Object gestureDetectorCompatImpl = impl.get(mGestureDetector);
+            if (gestureDetectorCompatImpl.getClass().getSimpleName()
+                    .equals("GestureDetectorCompatImplJellybeanMr2")) {
+                Class gestureDetectorCompatImplJellybeanMr2Class = Class
+                        .forName("android.support.v4.view.GestureDetectorCompat" +
+                                "$GestureDetectorCompatImplJellybeanMr2");
+                Field detectorField = gestureDetectorCompatImplJellybeanMr2Class
+                        .getDeclaredField("mDetector");
+                detectorField.setAccessible(true);
+                Object gestureDetector = detectorField.get(gestureDetectorCompatImpl);
+                Field handlerField = gestureDetector.getClass().getDeclaredField("mHandler");
+                handlerField.setAccessible(true);
+                Handler handler = (Handler) handlerField.get(gestureDetector);
+                handler.removeMessages(2);
+            } else {
+                Class gestureDetectorCompatImplBaseClass = Class
+                        .forName("android.support.v4.view.GestureDetectorCompat" +
+                                "$GestureDetectorCompatImplBase");
+                Field handlerField = gestureDetectorCompatImplBaseClass
+                        .getDeclaredField("mHandler");
+                handlerField.setAccessible(true);
+                Handler handler = (Handler) handlerField.get(gestureDetectorCompatImpl);
+                handler.removeMessages(2);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "removeLongPressMessage: ");
+        }
     }
+
+    public BoardViewHolder getBoardViewHolder() {
+        return mBoardViewHolder;
+    }
+
+    public RecyclerView getContentView() {
+        return mContentView;
+    }
+
 }

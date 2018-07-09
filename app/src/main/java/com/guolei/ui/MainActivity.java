@@ -1,9 +1,12 @@
-package com.guolei.boardview;
+package com.guolei.ui;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+
+import com.guolei.boardview.BoardView;
+import com.guolei.boardview.R;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,7 +18,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mBoardView = findViewById(R.id.boardview);
-        mBoardView.setCallback(new BoardViewCallback());
+        mBoardView.setListener(new KanbanBoardViewListener());
+        mBoardView.setAdapter(new BoardViewAdapter(mBoardView.getBoardViewHolder()));
 
     }
 
@@ -28,10 +32,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.less) {
-            mBoardView.scale(true);
+            mBoardView.scale();
             return true;
         } else if (item.getItemId() == R.id.restore) {
-            mBoardView.scale(false);
+            mBoardView.scale();
             return false;
         }
         return super.onOptionsItemSelected(item);

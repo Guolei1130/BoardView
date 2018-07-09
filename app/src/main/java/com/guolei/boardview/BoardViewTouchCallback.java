@@ -1,15 +1,33 @@
 package com.guolei.boardview;
+//                    _    _   _ _
+//__      _____  _ __| | _| |_(_) | ___
+//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
+// \ V  V / (_) | |  |   <| |_| | |  __/
+//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
 
 
 import android.support.v7.widget.RecyclerView;
 
+import com.guolei.ui.BoardViewAdapter;
+import com.guolei.ui.ColumnAdapter;
 
+
+/**
+ * Copyright © 2013-2017 Worktile. All Rights Reserved.
+ * Author: guolei
+ * Email: 1120832563@qq.com
+ * Date: 18/2/27
+ * Time: 上午11:36
+ * Desc:
+ */
 public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
 
-    private RecyclerView.Adapter mAdapter;
+    private int mFromPos = 0;
 
-    BoardViewTouchCallback(RecyclerView.Adapter adapter) {
-        mAdapter = adapter;
+    private BoardViewHolder mBoardViewHolder;
+
+    public BoardViewTouchCallback(BoardViewHolder boardViewHolder) {
+        mBoardViewHolder = boardViewHolder;
     }
 
     @Override
@@ -21,10 +39,16 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
     }
 
     @Override
-    public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+    public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
+                          RecyclerView.ViewHolder target) {
         int fromPosition = viewHolder.getAdapterPosition();
         int toPosition = target.getAdapterPosition();
-        mAdapter.notifyItemMoved(fromPosition, toPosition);
+        RecyclerView.Adapter adapter = recyclerView.getAdapter();
+        if (adapter instanceof BoardViewAdapter && mBoardViewHolder.getBoardViewListener() != null
+                && mBoardViewHolder.getBoardViewListener().isEnableSelectColumn(toPosition)) {
+            ((BoardViewAdapter) adapter).swap(fromPosition, toPosition);
+            adapter.notifyItemMoved(fromPosition, toPosition);
+        }
         return true;
     }
 
@@ -38,6 +62,7 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
         if (actionState != ItemTouchHelper.ACTION_STATE_IDLE) {
             viewHolder.itemView.setAlpha(0.8f);
             viewHolder.itemView.setRotation(-5f);
+            mFromPos = viewHolder.getAdapterPosition();
         }
         super.onSelectedChanged(viewHolder, actionState);
 
@@ -49,5 +74,9 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
 //        viewHolder.itemView.setBackgroundColor(Color.parseColor("#ff00ddff"));
         viewHolder.itemView.setAlpha(1f);
         viewHolder.itemView.setRotation(0f);
+        if (mBoardViewHolder.getBoardViewListener() != null) {
+            mBoardViewHolder.getBoardViewListener().onReleaseColumn(mFromPos,
+                    viewHolder.getAdapterPosition());
+        }
     }
 }

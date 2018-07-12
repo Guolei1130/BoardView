@@ -1,4 +1,4 @@
-package com.guolei.boardview;
+package com.guolei.ui;
 
 
 import android.graphics.Rect;

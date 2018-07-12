@@ -7,8 +7,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.guolei.boardview.BaseBoardViewAdapter;
-import com.guolei.boardview.BoardViewHolder;
+import com.guolei.boardview.AbsBoardViewAdapter;
+import com.guolei.boardview.BoardViewStateHolder;
 import com.guolei.boardview.R;
 
 import java.util.ArrayList;
@@ -16,13 +16,13 @@ import java.util.Collections;
 import java.util.List;
 
 
-public class ColumnAdapter extends BaseBoardViewAdapter<ColumnAdapter.SimpleViewHolder,String> {
+public class ColumnAdapter extends AbsBoardViewAdapter<ColumnAdapter.SimpleViewHolder,String> {
 
     private List<String> mData = new ArrayList<>();
 
-    private BoardViewHolder mBoardViewHolder;
+    private BoardViewStateHolder mBoardViewHolder;
 
-    ColumnAdapter(BoardViewHolder boardViewHolder,List<String> data) {
+    ColumnAdapter(BoardViewStateHolder boardViewHolder, List<String> data) {
         mBoardViewHolder = boardViewHolder;
         mData.addAll(data);
     }

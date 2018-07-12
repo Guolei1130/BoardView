@@ -33,12 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Copyright © 2013-2017 Worktile. All Rights Reserved.
- * Author: guolei
- * Email: 1120832563@qq.com
- * Date: 18/2/27
- * Time: 下午12:22
- * Desc:
+ * copy from android source code and change a little
  */
 public class ItemTouchHelper extends RecyclerView.ItemDecoration
         implements RecyclerView.OnChildAttachStateChangeListener {

@@ -11,27 +11,31 @@
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="@android:color/darker_gray"
-        android:text="title"
+        android:text="@string/title"
         android:textAllCaps="false"
         android:gravity="center"
-        android:textSize="20dp"
+        android:textSize="20sp"
+        android:background="@android:color/white"
+
         />
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_below="@id/title"
+        android:paddingTop="10dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="50dp"
         />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="@android:color/darker_gray"
-        android:text="footer"
+        android:text="@string/footer"
         android:textAllCaps="false"
+        android:layout_marginTop="-50dp"
         android:gravity="center"
-        android:textSize="20dp"
+        android:textSize="20sp"
+        android:background="@android:color/white"
         android:layout_below="@id/recycler_view"
         />
 </RelativeLayout>

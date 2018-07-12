@@ -9,7 +9,6 @@ package com.guolei.boardview;
 import android.support.v7.widget.RecyclerView;
 
 import com.guolei.ui.BoardViewAdapter;
-import com.guolei.ui.ColumnAdapter;
 
 
 /**
@@ -24,9 +23,9 @@ public class BoardViewTouchCallback extends ItemTouchHelper.Callback {
 
     private int mFromPos = 0;
 
-    private BoardViewHolder mBoardViewHolder;
+    private BoardViewStateHolder mBoardViewHolder;
 
-    public BoardViewTouchCallback(BoardViewHolder boardViewHolder) {
+    BoardViewTouchCallback(BoardViewStateHolder boardViewHolder) {
         mBoardViewHolder = boardViewHolder;
     }
 

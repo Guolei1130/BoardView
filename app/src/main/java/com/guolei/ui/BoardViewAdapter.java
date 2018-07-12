@@ -7,8 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.guolei.boardview.BoardViewHolder;
-import com.guolei.boardview.CustomItemDecoration;
+import com.guolei.boardview.BoardViewStateHolder;
 import com.guolei.boardview.R;
 import com.guolei.boardview.SimpleLayoutManager;
 
@@ -22,9 +21,9 @@ public class BoardViewAdapter extends RecyclerView.Adapter<BoardViewAdapter.Simp
 
     private List<List<String>> mData = new ArrayList<>();
 
-    private BoardViewHolder mBoardViewHolder;
+    private BoardViewStateHolder mBoardViewHolder;
 
-    public BoardViewAdapter(BoardViewHolder boardViewHolder) {
+    public BoardViewAdapter(BoardViewStateHolder boardViewHolder) {
         mBoardViewHolder = boardViewHolder;
         initData();
     }

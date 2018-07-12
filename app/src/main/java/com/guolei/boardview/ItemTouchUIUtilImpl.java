@@ -1,15 +1,17 @@
 package com.guolei.boardview;
 
 
-
 import android.graphics.Canvas;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchUIUtil;
 import android.view.View;
 
+/**
+ * copy from android source code
+ */
 
-public class ItemTouchUIUtilImpl {
+class ItemTouchUIUtilImpl {
     static class Api21Impl extends ItemTouchUIUtilImpl.BaseImpl {
         @Override
         public void onDraw(Canvas c, RecyclerView recyclerView, View view,

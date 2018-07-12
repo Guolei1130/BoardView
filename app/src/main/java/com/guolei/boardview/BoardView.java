@@ -1,10 +1,4 @@
 package com.guolei.boardview;
-//                    _    _   _ _
-//__      _____  _ __| | _| |_(_) | ___
-//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
-// \ V  V / (_) | |  |   <| |_| | |  __/
-//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
-
 
 import android.animation.Animator;
 import android.annotation.SuppressLint;
@@ -43,6 +37,7 @@ import java.lang.reflect.Method;
  * Time: 下午4:21
  * Desc:
  */
+@SuppressWarnings("unused")
 public class BoardView extends FrameLayout {
     private static final String TAG = BoardView.class.getSimpleName();
 
@@ -69,9 +64,8 @@ public class BoardView extends FrameLayout {
 
     private int mOriginColumnIndex, mOriginRowIndex, mTargetColumnIndex, mTargetRowIndex;
 
-    private ItemTouchHelper helper;
     private BoardViewListener mBoardViewListener;
-    private BoardViewHolder mBoardViewHolder;
+    private BoardViewStateHolder mBoardViewHolder;
 
     public BoardView(@NonNull Context context) {
         this(context, null);
@@ -88,7 +82,7 @@ public class BoardView extends FrameLayout {
         mTouchSlop = ViewConfiguration.getTouchSlop();
         mScaledTouchSlop = viewConfiguration.getScaledTouchSlop();
         initGestureDetector();
-        mBoardViewHolder = new BoardViewHolder();
+        mBoardViewHolder = new BoardViewStateHolder();
     }
 
     private void initGestureDetector() {
@@ -147,7 +141,7 @@ public class BoardView extends FrameLayout {
 
     public void setAdapter(RecyclerView.Adapter adapter) {
         mContentView.setAdapter(adapter);
-        helper = new ItemTouchHelper(new BoardViewTouchCallback(mBoardViewHolder));
+        ItemTouchHelper helper = new ItemTouchHelper(new BoardViewTouchCallback(mBoardViewHolder));
         helper.attachToRecyclerView(mContentView);
         helper.setResponseEventListener(mBoardViewListener);
     }
@@ -182,7 +176,7 @@ public class BoardView extends FrameLayout {
             case MotionEvent.ACTION_MOVE:
                 if (mSelected != null) {
                     mCurrentTouchEvent = MotionEvent.obtain(event);
-                    if (mBoardViewHolder.isSmall()) {
+                    if (mBoardViewHolder.isInSmallMode()) {
                         mMirrorView.setTranslationX(event.getX() - mLongPressEvent.getX()
                                 + mInitialTouchX);
                         mMirrorView.setTranslationY(event.getY() - mLongPressEvent.getY()
@@ -234,7 +228,7 @@ public class BoardView extends FrameLayout {
         float distanceBottom = Math.abs((int) (mColumnHeaderHeight + mCurrentRecyclerViewBottom
                 - mCurrentTouchEvent.getY()));
         float distanceLeft = mCurrentTouchEvent.getX();
-        float distanceRight = (getWindowWidth() / mBoardViewHolder.getFactor()
+        float distanceRight = (getWindowWidth() / mBoardViewHolder.getScaleFactor()
                 - mCurrentTouchEvent.getX());
 
         if ((distanceTop < distanceLeft && distanceTop < distanceRight)
@@ -268,7 +262,7 @@ public class BoardView extends FrameLayout {
                     int toPos = target.getAdapterPosition();
                     int position = mSelected.getAdapterPosition();
                     if (position == -1) {
-                        BaseBoardViewAdapter adapter = (BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
+                        AbsBoardViewAdapter adapter = (AbsBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
                         position = adapter.getPositionFromId(mBoardViewHolder.getSelectedId());
                     }
                     if (position == -1) return;
@@ -290,9 +284,9 @@ public class BoardView extends FrameLayout {
         // 跨RecyclerView
         if (targetRecycler != null && targetRecycler != mCurrentSelectedRecyclerView) {
             Object data = null;
-            boolean enableInsert = false;
+            boolean enableInsert;
             if (mBoardViewListener != null) {
-                int pos = ((BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter())
+                int pos = ((AbsBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter())
                         .getPositionFromId(mBoardViewHolder.getSelectedId());
                 data = mBoardViewListener.getData(mCurrentSelectedRecyclerView, pos);
                 //noinspection unchecked
@@ -326,12 +320,7 @@ public class BoardView extends FrameLayout {
             final RecyclerView.ViewHolder tmpViewHolder1 = mCurrentSelectedRecyclerView
                     .findViewHolderForAdapterPosition(position);
             if (tmpViewHolder1 == null || tmpViewHolder1.getAdapterPosition() != -1) {
-                postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateSelectedByInsert();
-                    }
-                }, 16);
+                postDelayed(this::updateSelectedByInsert, 16);
                 mCanMove = false;
             } else {
                 mSelected = tmpHolder;
@@ -510,7 +499,7 @@ public class BoardView extends FrameLayout {
             }
             mSelected = selected;
             int position = mSelected.getAdapterPosition();
-            BaseBoardViewAdapter adapter = (BaseBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
+            AbsBoardViewAdapter adapter = (AbsBoardViewAdapter) mCurrentSelectedRecyclerView.getAdapter();
             String id = adapter.getIdFromPosition(position);
             mBoardViewHolder.setSelectedId(id);
             if (actionState == ACTION_BIND) {
@@ -615,15 +604,15 @@ public class BoardView extends FrameLayout {
     }
 
     public void scale() {
-        boolean lessen = !mBoardViewHolder.isSmall();
+        boolean lessen = !mBoardViewHolder.isInSmallMode();
         if (lessen) {
             //缩小
-            mBoardViewHolder.setSmall(true);
+            mBoardViewHolder.setInSmallMode(true);
         } else {
             //还原
-            mBoardViewHolder.setSmall(false);
+            mBoardViewHolder.setInSmallMode(false);
         }
-        float scale = mBoardViewHolder.getFactor();
+        float scale = mBoardViewHolder.getScaleFactor();
         View rootView = (View) getParent();
         if (lessen && mParentHeight == 0) {
             mParentHeight = rootView.getHeight();
@@ -699,7 +688,7 @@ public class BoardView extends FrameLayout {
                 //左右边界情况
                 Rect rect = new Rect();
                 mSelected.itemView.getGlobalVisibleRect(rect);
-                int width = (int) (mSelected.itemView.getWidth() * mBoardViewHolder.getFactor());
+                int width = (int) (mSelected.itemView.getWidth() * mBoardViewHolder.getScaleFactor());
                 if (Math.abs(rect.left - rect.right) < width) {
                     if (rect.right + width > getWindowWidth()) {
                         //右侧
@@ -717,7 +706,7 @@ public class BoardView extends FrameLayout {
                 mInitialTouchY = e.getY();
             }
             //缩小状态下，上面的方案不行，采用下面的方案
-            if (mBoardViewHolder.isSmall()) {
+            if (mBoardViewHolder.isInSmallMode()) {
                 mLongPressEvent = MotionEvent.obtain(e);
                 mInitialTouchX = mMirrorView.getTranslationX();
                 mInitialTouchY = mMirrorView.getTranslationY();
@@ -797,7 +786,7 @@ public class BoardView extends FrameLayout {
         }
     }
 
-    public BoardViewHolder getBoardViewHolder() {
+    public BoardViewStateHolder getBoardViewHolder() {
         return mBoardViewHolder;
     }
 

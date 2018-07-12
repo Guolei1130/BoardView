@@ -4,11 +4,11 @@
     android:id="@+id/content"
     android:layout_width="match_parent"
     android:layout_height="50dp"
-    android:background="@android:color/holo_blue_bright"
-    android:text="content"
-    android:textSize="25dp"
+    android:text="@string/content"
+    android:textSize="16sp"
     android:textAllCaps="false"
     android:gravity="center"
+    android:background="@android:color/white"
     >
 
 </TextView>

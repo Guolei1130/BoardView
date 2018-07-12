@@ -1,12 +1,5 @@
 package com.guolei.boardview;
 
-//                    _    _   _ _
-//__      _____  _ __| | _| |_(_) | ___
-//\ \ /\ / / _ \| '__| |/ / __| | |/ _ \
-// \ V  V / (_) | |  |   <| |_| | |  __/
-//  \_/\_/ \___/|_|  |_|\_\\__|_|_|\___|
-
-
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 
@@ -28,8 +21,8 @@ public abstract class BaseBoardViewListener<T> implements BoardViewListener<T>{
             return;
         }
         RecyclerView.Adapter adapter = recyclerView.getAdapter();
-        if (adapter instanceof BaseBoardViewAdapter) {
-            ((BaseBoardViewAdapter) adapter).swap(from, to);
+        if (adapter instanceof AbsBoardViewAdapter) {
+            ((AbsBoardViewAdapter) adapter).swap(from, to);
         }
         adapter.notifyItemMoved(from, to);
         Log.e(TAG, "onSwap: " + from + ";" + to);
@@ -39,8 +32,9 @@ public abstract class BaseBoardViewListener<T> implements BoardViewListener<T>{
     public T getData(RecyclerView recyclerView, int position) {
         RecyclerView.Adapter adapter = recyclerView.getAdapter();
         T data = null;
-        if (adapter instanceof BaseBoardViewAdapter) {
-            data = (T) ((BaseBoardViewAdapter) adapter).getData(position);
+        if (adapter instanceof AbsBoardViewAdapter) {
+            //noinspection unchecked
+            data = (T) ((AbsBoardViewAdapter) adapter).getData(position);
         }
         return data;
     }
@@ -49,8 +43,9 @@ public abstract class BaseBoardViewListener<T> implements BoardViewListener<T>{
     public T onRemove(RecyclerView recyclerView, int position) {
         RecyclerView.Adapter adapter = recyclerView.getAdapter();
         T data = null;
-        if (adapter instanceof BaseBoardViewAdapter) {
-            data = (T) ((BaseBoardViewAdapter) adapter).remove(position);
+        if (adapter instanceof AbsBoardViewAdapter) {
+            //noinspection unchecked
+            data = (T) ((AbsBoardViewAdapter) adapter).remove(position);
         }
         adapter.notifyItemRemoved(position);
         return data;
@@ -59,8 +54,9 @@ public abstract class BaseBoardViewListener<T> implements BoardViewListener<T>{
     @Override
     public void onInsert(RecyclerView recyclerView, int position, T data) {
         RecyclerView.Adapter adapter = recyclerView.getAdapter();
-        if (adapter instanceof BaseBoardViewAdapter) {
-            ((BaseBoardViewAdapter) adapter).add(position, data);
+        if (adapter instanceof AbsBoardViewAdapter) {
+            //noinspection unchecked
+            ((AbsBoardViewAdapter) adapter).add(position, data);
         }
         adapter.notifyItemInserted(position);
     }
